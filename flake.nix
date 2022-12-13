@@ -12,6 +12,16 @@
       pkgs = nixpkgs.legacyPackages.${system};
     in
     {
+      packages.${system}.default = (import nixpkgs {
+        inherit system;
+        overlays = [ self.overlays.default ];
+      }).friendly-hex;
+
+      apps.${system}.default = {
+        type = "app";
+        program = "${self.packages.${system}.default}/bin/friendly-hex";
+      };
+
       devShells.${system}.default = pkgs.mkShell {
         buildInputs = [ (pkgs.python3.withPackages (py: [ py.poetry ])) ];
         shellHook = ''
@@ -19,5 +29,12 @@
         '';
       };
     };
-  in my-flake.outputs-for each systems;
+  in (my-flake.outputs-for each systems) //
+  {
+    overlays.default = final: prev: {
+      friendly-hex = (final.poetry2nix.mkPoetryApplication {
+        projectDir = builtins.path { path = ./.; };
+      });
+    };
+  };
 }
